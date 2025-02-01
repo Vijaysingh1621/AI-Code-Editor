@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
 import axios from "axios"
@@ -64,7 +65,7 @@ export default function CodeEditor() {
     }
     return []
   })
-  const [currentFile, setCurrentFile] = useState<File>(files[0])
+  const [currentFile, setCurrentFile] = useState<File>(files[0] || { name: "", language: "javascript", content: "" })
   const [aiSuggestion, setAiSuggestion] = useState("")
   const [editorTheme, setEditorTheme] = useState("vs-dark")
   const [isLoading, setIsLoading] = useState(false)
@@ -123,6 +124,9 @@ export default function CodeEditor() {
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor
   }
+
+  // ... (rest of the component code)
+
 
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined) {
