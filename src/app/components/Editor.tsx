@@ -4,7 +4,19 @@ import { useState, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
 import axios from "axios"
 import { motion } from "framer-motion"
-import { Loader2, Code2, Wand2, FolderTree, Play, Save } from "lucide-react"
+import {
+  Loader2,
+  Code2,
+  Wand2,
+  FolderTree,
+  Play,
+  Save,
+  Trash2,
+  Plus,
+  FileIcon,
+  FileTextIcon,
+  FileJsonIcon,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,6 +24,11 @@ import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/hooks/use-toast"
 import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { executeCode, testCode } from "../services/codeExecutionService"
+import { useTheme } from "next-themes"
 
 // Dynamically import Monaco Editor
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
@@ -36,17 +53,35 @@ interface File {
 }
 
 export default function CodeEditor() {
-  const [files, setFiles] = useState<File[]>([
-    { name: "main.js", language: "javascript", content: "console.log('Hello, world!');" },
-    { name: "styles.css", language: "css", content: "body { font-family: sans-serif; }" },
-  ])
+  const [files, setFiles] = useState<File[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("codeEditorFiles")
+      return saved
+        ? JSON.parse(saved)
+        : [
+            { name: "main.js", language: "javascript", content: "console.log('Hello, world!');" },
+            { name: "styles.css", language: "css", content: "body { font-family: sans-serif; }" },
+          ]
+    }
+    return []
+  })
   const [currentFile, setCurrentFile] = useState<File>(files[0])
   const [aiSuggestion, setAiSuggestion] = useState("")
-  const [theme, setTheme] = useState("vs-dark")
+  const [editorTheme, setEditorTheme] = useState("vs-dark")
   const [isLoading, setIsLoading] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
   const [consoleOutput, setConsoleOutput] = useState("")
+  const [testResults, setTestResults] = useState<string[]>([])
+  const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false)
+  const [newFileName, setNewFileName] = useState("")
+  const [newFileLanguage, setNewFileLanguage] = useState("javascript")
   const editorRef = useRef<any>(null)
   const { toast } = useToast()
+  const { theme, setTheme } = useTheme()
+
+  useEffect(() => {
+    localStorage.setItem("codeEditorFiles", JSON.stringify(files))
+  }, [files])
 
   useEffect(() => {
     // Custom scrollbar styles
@@ -93,179 +128,271 @@ export default function CodeEditor() {
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined) {
       setCurrentFile({ ...currentFile, content: value })
+      setFiles(files.map((f) => (f.name === currentFile.name ? { ...f, content: value } : f)))
     }
   }
 
   const addNewFile = () => {
-    const newFileName = prompt("Enter the name of the new file:")
-    if (newFileName) {
+    if (newFileName && newFileLanguage) {
       const newFile: File = {
         name: newFileName,
-        language: "javascript",
+        language: newFileLanguage,
         content: "",
       }
       setFiles([...files, newFile])
       setCurrentFile(newFile)
+      setIsAddFileModalOpen(false)
+      setNewFileName("")
+      setNewFileLanguage("javascript")
     }
   }
 
-  const runCode = () => {
-    setConsoleOutput("")
-    const originalLog = console.log
-    console.log = (...args) => {
-      setConsoleOutput((prev) => prev + args.join(" ") + "\n")
-      originalLog(...args)
-    }
-
+  const runCode = async () => {
+    setIsRunning(true)
+    setConsoleOutput("Running code...\n" )
     try {
-      // eslint-disable-next-line no-eval
-      eval(currentFile.content)
+      const result = await executeCode(currentFile.language, currentFile.content)
+      setConsoleOutput((prev) => prev + ("Output :"+result.output || "") + (result.error ? `Error: ${result.error}` : ""))
     } catch (error) {
-      if (error instanceof Error) {
-        setConsoleOutput(error.toString())
-      }
+      setConsoleOutput((prev) => prev + `Error: ${error}\n`)
+    } finally {
+      setIsRunning(false)
     }
+  }
 
-    console.log = originalLog
+  const runTests = async () => {
+    setTestResults([])
+    setConsoleOutput("Running tests...\n")
+    try {
+      const mockTestCases = ["Test 1", "Test 2", "Test 3"]
+      const results = await testCode(currentFile.language, currentFile.content, mockTestCases)
+      setTestResults(results)
+      setConsoleOutput((prev) => prev + `Test Results: ${results.join(", ")}\n`)
+    } catch (error) {
+      setConsoleOutput((prev) => prev + `Error running tests: ${error}\n`)
+    }
+  }
+
+  const clearAllHistory = () => {
+    localStorage.removeItem("codeEditorFiles")
+    setFiles([{ name: "main.js", language: "javascript", content: "console.log('Hello, world!');" }])
+    setCurrentFile({ name: "main.js", language: "javascript", content: "console.log('Hello, world!');" })
+    toast({
+      title: "History Cleared",
+      description: "All saved files have been removed.",
+    })
+  }
+
+  const getFileIcon = (language: string) => {
+    switch (language) {
+      case "javascript":
+        return <FileIcon className="mr-2 h-4 w-4" />
+      case "typescript":
+        return <FileTextIcon className="mr-2 h-4 w-4" />
+      case "python":
+        return <FileIcon className="mr-2 h-4 w-4" />
+      case "java":
+        return <FileJsonIcon className="mr-2 h-4 w-4" />
+      default:
+        return <FileIcon className="mr-2 h-4 w-4" />
+    }
   }
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-screen">
-      <ResizablePanel defaultSize={20} minSize={15}>
-        <div className="h-full bg-muted p-4">
-          <h2 className="text-lg font-semibold mb-4 flex items-center">
-            <FolderTree className="mr-2" /> Files
-          </h2>
-          <ScrollArea className="h-[calc(100%-6rem)]">
-            {files.map((file) => (
-              <div
-                key={file.name}
-                className={`p-2 cursor-pointer rounded ${
-                  file.name === currentFile.name ? "bg-accent" : "hover:bg-accent/50"
-                }`}
-                onClick={() => setCurrentFile(file)}
-              >
-                {file.name}
-              </div>
-            ))}
-          </ScrollArea>
-          <Button onClick={addNewFile} className="w-full mt-4">
-            Add New File
+    <div className={`h-screen flex flex-col ${theme === "dark" ? "dark" : ""}`}>
+      <div className="flex justify-between items-center p-4 bg-background">
+        <h1 className="text-2xl font-bold flex items-center">
+          <Code2 className="mr-2" /> Advanced Code Editor
+        </h1>
+        <div className="flex space-x-2">
+          <Select
+            value={currentFile.language}
+            onValueChange={(value) => setCurrentFile({ ...currentFile, language: value })}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select Language" />
+            </SelectTrigger>
+            <SelectContent>
+              {languages.map((lang) => (
+                <SelectItem key={lang.value} value={lang.value}>
+                  {lang.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={editorTheme} onValueChange={setEditorTheme}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select Theme" />
+            </SelectTrigger>
+            <SelectContent>
+              {themes.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+            {theme === "dark" ? "🌞" : "🌙"}
           </Button>
         </div>
-      </ResizablePanel>
-      <ResizablePanel defaultSize={80}>
-        <div className="flex flex-col h-full">
-          <div className="flex justify-between items-center p-4 bg-background">
-            <h1 className="text-2xl font-bold flex items-center">
-              <Code2 className="mr-2" /> Advanced Code Editor
-            </h1>
-            <div className="flex space-x-2">
-              <Select
-                value={currentFile.language}
-                onValueChange={(value) => setCurrentFile({ ...currentFile, language: value })}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select Language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang.value} value={lang.value}>
-                      {lang.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={theme} onValueChange={setTheme}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select Theme" />
-                </SelectTrigger>
-                <SelectContent>
-                  {themes.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      </div>
+      <div className="flex-grow flex overflow-hidden">
+        <ResizablePanelGroup direction="horizontal" className="flex-grow">
+          <ResizablePanel defaultSize={20} minSize={15}>
+            <div className="h-full bg-background p-4 overflow-auto">
+              <h2 className="text-lg font-semibold mb-4 flex items-center">
+                <FolderTree className="mr-2" /> Files
+              </h2>
+              <ScrollArea className="h-[calc(100%-6rem)]">
+                {files.map((file) => (
+                  <div
+                    key={file.name}
+                    className={`p-2 cursor-pointer rounded flex items-center ${
+                      file.name === currentFile.name ? "bg-accent" : "hover:bg-accent/50"
+                    }`}
+                    onClick={() => setCurrentFile(file)}
+                  >
+                    {getFileIcon(file.language)}
+                    {file.name}
+                  </div>
+                ))}
+              </ScrollArea>
+              <Dialog open={isAddFileModalOpen} onOpenChange={setIsAddFileModalOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full mt-4">
+                    <Plus className="mr-2 h-4 w-4" /> Add New File
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New File</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="name" className="text-right">
+                        Name
+                      </Label>
+                      <Input
+                        id="name"
+                        value={newFileName}
+                        onChange={(e) => setNewFileName(e.target.value)}
+                        className="col-span-3"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="language" className="text-right">
+                        Language
+                      </Label>
+                      <Select value={newFileLanguage} onValueChange={setNewFileLanguage}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select Language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {languages.map((lang) => (
+                            <SelectItem key={lang.value} value={lang.value}>
+                              {lang.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button onClick={addNewFile}>Add File</Button>
+                </DialogContent>
+              </Dialog>
             </div>
-          </div>
-          <Tabs defaultValue="editor" className="flex-grow flex flex-col">
-            <TabsList>
-              <TabsTrigger value="editor">Editor</TabsTrigger>
-              <TabsTrigger value="ai">AI Suggestion</TabsTrigger>
-              <TabsTrigger value="console">Console</TabsTrigger>
-            </TabsList>
-            <TabsContent value="editor" className="flex-grow">
-              <MonacoEditor
-                height="100%"
-                language={currentFile.language}
-                value={currentFile.content}
-                onChange={handleEditorChange}
-                theme={theme}
-                onMount={handleEditorDidMount}
-                options={{
-                  minimap: { enabled: true },
-                  fontSize: 16,
-                  lineNumbers: "on",
-                  roundedSelection: false,
-                  scrollBeyondLastLine: false,
-                  readOnly: false,
-                  scrollbar: {
-                    vertical: "visible",
-                    horizontal: "visible",
-                    verticalScrollbarSize: 17,
-                    horizontalScrollbarSize: 17,
-                    verticalHasArrows: false,
-                    horizontalHasArrows: false,
-                    arrowSize: 30,
-                  },
-                }}
-              />
-            </TabsContent>
-            <TabsContent value="ai">
-              <ScrollArea className="h-full">
-                <pre className="p-4 whitespace-pre-wrap">{aiSuggestion || "AI suggestion will appear here..."}</pre>
-              </ScrollArea>
-            </TabsContent>
-            <TabsContent value="console">
-              <ScrollArea className="h-full">
-                <pre className="p-4 font-mono bg-black text-green-400 whitespace-pre-wrap">
-                  {consoleOutput || "Console output will appear here..."}
-                </pre>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-          <motion.div
-            className="p-4 bg-background"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="flex space-x-2">
-              <Button onClick={getAiSuggestion} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Getting AI Suggestion...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4" /> Get AI Suggestion
-                  </>
-                )}
-              </Button>
-              <Button onClick={runCode}>
+          </ResizablePanel>
+          <ResizablePanel defaultSize={80}>
+            <div className="flex flex-col h-full">
+              <Tabs defaultValue="editor" className="flex-grow flex flex-col">
+                <TabsList>
+                  <TabsTrigger value="editor">Editor</TabsTrigger>
+                  <TabsTrigger value="ai">AI Suggestion</TabsTrigger>
+                </TabsList>
+                <TabsContent value="editor" className="flex-grow overflow-hidden">
+                  <div className="h-full flex flex-col">
+                    <div className="flex-grow overflow-auto">
+                      <MonacoEditor
+                        height="100%"
+                        language={currentFile.language}
+                        value={currentFile.content}
+                        onChange={handleEditorChange}
+                        theme={editorTheme}
+                        onMount={handleEditorDidMount}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 16,
+                          lineNumbers: "on",
+                          roundedSelection: false,
+                          scrollBeyondLastLine: false,
+                          readOnly: false,
+                          automaticLayout: true,
+                        }}
+                      />
+                    </div>
+                    <div className="h-1/3 bg-black text-green-400 p-4 font-mono overflow-auto">
+                      <h3 className="text-lg font-semibold mb-2">Console Output</h3>
+                      <ScrollArea className="h-[calc(100%-2rem)]">
+                        <pre className="whitespace-pre-wrap">
+                          {consoleOutput || "Console output will appear here..."}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="ai" className="flex-grow overflow-auto">
+                  <ScrollArea className="h-full">
+                    <pre className="p-4 whitespace-pre-wrap">{aiSuggestion || "AI suggestion will appear here..."}</pre>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+      <motion.div
+        className="p-4 bg-background"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex space-x-2">
+          <Button onClick={getAiSuggestion} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Getting AI Suggestion...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-2 h-4 w-4" /> Get AI Suggestion
+              </>
+            )}
+          </Button>
+          <Button onClick={runCode} disabled={isRunning}>
+            {isRunning ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Running Code...
+              </>
+            ) : (
+              <>
                 <Play className="mr-2 h-4 w-4" /> Run Code
-              </Button>
-              <Button onClick={() => toast({ title: "Saved", description: "Your code has been saved." })}>
-                <Save className="mr-2 h-4 w-4" /> Save
-              </Button>
-            </div>
-          </motion.div>
+              </>
+            )}
+          </Button>
+          <Button onClick={runTests}>
+            <Play className="mr-2 h-4 w-4" /> Run Tests
+          </Button>
+          <Button onClick={() => toast({ title: "Saved", description: "Your code has been saved." })}>
+            <Save className="mr-2 h-4 w-4" /> Save
+          </Button>
+          <Button onClick={clearAllHistory} variant="destructive">
+            <Trash2 className="mr-2 h-4 w-4" /> Clear All History
+          </Button>
         </div>
-      </ResizablePanel>
+      </motion.div>
       <Toaster />
-    </ResizablePanelGroup>
+    </div>
   )
 }
 
