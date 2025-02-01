@@ -16,6 +16,10 @@ import {
   FileIcon,
   FileTextIcon,
   FileJsonIcon,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
+  ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -29,6 +33,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { executeCode, testCode } from "../services/codeExecutionService"
 import { useTheme } from "next-themes"
+import { ThemeProvider } from "next-themes"
+import { ActivityLog } from "./activity-log"
+import { useUndo } from "@/hooks/use-undo"
+import { CommentBox } from "./comment-box"
 
 // Dynamically import Monaco Editor
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
@@ -44,6 +52,16 @@ const languages = [
   { value: "typescript", label: "TypeScript" },
   { value: "python", label: "Python" },
   { value: "java", label: "Java" },
+]
+
+const fontSizes = [
+  { value: "12", label: "12px" },
+  { value: "14", label: "14px" },
+  { value: "16", label: "16px" },
+  { value: "18", label: "18px" },
+  { value: "20", label: "20px" },
+  { value: "22", label: "22px" },
+  { value: "24", label: "24px" },
 ]
 
 interface File {
@@ -75,9 +93,14 @@ export default function CodeEditor() {
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false)
   const [newFileName, setNewFileName] = useState("")
   const [newFileLanguage, setNewFileLanguage] = useState("javascript")
+  const [fontSize, setFontSize] = useState("16")
+  const [accentColor, setAccentColor] = useState("#007acc")
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const editorRef = useRef<any>(null)
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
+  const [activities, setActivities] = useState<Array<{ action: string; timestamp: Date }>>([])
+  const { state, setState, undo, redo, canUndo, canRedo } = useUndo(currentFile.content)
 
   useEffect(() => {
     localStorage.setItem("codeEditorFiles", JSON.stringify(files))
@@ -108,7 +131,7 @@ export default function CodeEditor() {
       setAiSuggestion(res.data.suggestion)
       toast({
         title: "AI Suggestion Ready",
-        description: "Check out the AI tab for the suggestion!",
+        description: "Check out the AI suggestion!",
       })
     } catch (error) {
       toast({
@@ -125,13 +148,12 @@ export default function CodeEditor() {
     editorRef.current = editor
   }
 
-  // ... (rest of the component code)
-
-
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined) {
+      setState(value)
       setCurrentFile({ ...currentFile, content: value })
       setFiles(files.map((f) => (f.name === currentFile.name ? { ...f, content: value } : f)))
+      setActivities((prev) => [{ action: "Edited " + currentFile.name, timestamp: new Date() }, ...prev])
     }
   }
 
@@ -152,10 +174,12 @@ export default function CodeEditor() {
 
   const runCode = async () => {
     setIsRunning(true)
-    setConsoleOutput("Running code...\n" )
+    setConsoleOutput("Running code...\n")
     try {
       const result = await executeCode(currentFile.language, currentFile.content)
-      setConsoleOutput((prev) => prev + ("Output :"+result.output || "") + (result.error ? `Error: ${result.error}` : ""))
+      setConsoleOutput(
+        (prev) => prev + ("Output :" + result.output || "") + (result.error ? `Error: ${result.error}` : ""),
+      )
     } catch (error) {
       setConsoleOutput((prev) => prev + `Error: ${error}\n`)
     } finally {
@@ -202,200 +226,263 @@ export default function CodeEditor() {
   }
 
   return (
-    <div className={`h-screen flex flex-col ${theme === "dark" ? "dark" : ""}`}>
-      <div className="flex justify-between items-center p-4 bg-background">
-        <h1 className="text-2xl font-bold flex items-center">
-          <Code2 className="mr-2" /> Advanced Code Editor
-        </h1>
-        <div className="flex space-x-2">
-          <Select
-            value={currentFile.language}
-            onValueChange={(value) => setCurrentFile({ ...currentFile, language: value })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Language" />
-            </SelectTrigger>
-            <SelectContent>
-              {languages.map((lang) => (
-                <SelectItem key={lang.value} value={lang.value}>
-                  {lang.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={editorTheme} onValueChange={setEditorTheme}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Theme" />
-            </SelectTrigger>
-            <SelectContent>
-              {themes.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            {theme === "dark" ? "🌞" : "🌙"}
-          </Button>
-        </div>
-      </div>
-      <div className="flex-grow flex overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="flex-grow">
-          <ResizablePanel defaultSize={20} minSize={15}>
-            <div className="h-full bg-background p-4 overflow-auto">
-              <h2 className="text-lg font-semibold mb-4 flex items-center">
-                <FolderTree className="mr-2" /> Files
-              </h2>
-              <ScrollArea className="h-[calc(100%-6rem)]">
-                {files.map((file) => (
-                  <div
-                    key={file.name}
-                    className={`p-2 cursor-pointer rounded flex items-center ${
-                      file.name === currentFile.name ? "bg-accent" : "hover:bg-accent/50"
-                    }`}
-                    onClick={() => setCurrentFile(file)}
-                  >
-                    {getFileIcon(file.language)}
-                    {file.name}
-                  </div>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      value={{
+        light: "light",
+        dark: "dark",
+        system: "system",
+      }}
+    >
+      <div
+        className={`h-screen flex flex-col ${theme === "dark" ? "dark" : ""}`}
+        style={{ "--accent-color": accentColor } as React.CSSProperties}
+      >
+        <div className="flex justify-between items-center p-4 bg-background">
+          <h1 className="text-2xl font-bold flex items-center">
+            <Code2 className="mr-2" /> Advanced Code Editor
+          </h1>
+          <div className="flex space-x-4">
+            <Select
+              value={currentFile.language}
+              onValueChange={(value) => setCurrentFile({ ...currentFile, language: value })}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {languages.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
                 ))}
-              </ScrollArea>
-              <Dialog open={isAddFileModalOpen} onOpenChange={setIsAddFileModalOpen}>
-                <DialogTrigger asChild>
-                  <Button className="w-full mt-4">
-                    <Plus className="mr-2 h-4 w-4" /> Add New File
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New File</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="name" className="text-right">
-                        Name
-                      </Label>
-                      <Input
-                        id="name"
-                        value={newFileName}
-                        onChange={(e) => setNewFileName(e.target.value)}
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="language" className="text-right">
-                        Language
-                      </Label>
-                      <Select value={newFileLanguage} onValueChange={setNewFileLanguage}>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Select Language" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {languages.map((lang) => (
-                            <SelectItem key={lang.value} value={lang.value}>
-                              {lang.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button onClick={addNewFile}>Add File</Button>
-                </DialogContent>
-              </Dialog>
+              </SelectContent>
+            </Select>
+            <Select value={editorTheme} onValueChange={setEditorTheme}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Theme" />
+              </SelectTrigger>
+              <SelectContent>
+                {themes.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={fontSize} onValueChange={setFontSize}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Font Size" />
+              </SelectTrigger>
+              <SelectContent>
+                {fontSizes.map((size) => (
+                  <SelectItem key={size.value} value={size.value}>
+                    {size.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex space-x-2 items-center">
+              <Label htmlFor="accent-color">Accent:</Label>
+              <Input
+                id="accent-color"
+                type="color"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="w-8 h-8 p-0 border-none"
+              />
             </div>
-          </ResizablePanel>
-          <ResizablePanel defaultSize={80}>
-            <div className="flex flex-col h-full">
-              <Tabs defaultValue="editor" className="flex-grow flex flex-col">
-                <TabsList>
-                  <TabsTrigger value="editor">Editor</TabsTrigger>
+            <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+              {theme === "dark" ? "🌞" : "🌙"}
+            </Button>
+          </div>
+        </div>
+        <div className="flex-grow flex overflow-hidden">
+          <ResizablePanelGroup direction="horizontal" className="flex-grow">
+            <ResizablePanel
+              defaultSize={20}
+              minSize={isSidebarCollapsed ? 5 : 15}
+              maxSize={isSidebarCollapsed ? 5 : 30}
+            >
+              <div className="h-full bg-background p-4 overflow-auto relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                >
+                  {isSidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
+                </Button>
+                {!isSidebarCollapsed && (
+                  <>
+                    <h2 className="text-lg font-semibold mb-4 flex items-center">
+                      <FolderTree className="mr-2" /> Files
+                    </h2>
+                    <ScrollArea className="h-[calc(100%-6rem)]">
+                      {files.map((file) => (
+                        <div
+                          key={file.name}
+                          className={`p-2 cursor-pointer rounded flex items-center ${
+                            file.name === currentFile.name ? "bg-accent" : "hover:bg-accent/50"
+                          }`}
+                          onClick={() => {
+                            setCurrentFile(file)
+                            setState(file.content)
+                          }}
+                        >
+                          {getFileIcon(file.language)}
+                          {file.name}
+                        </div>
+                      ))}
+                    </ScrollArea>
+                    <Dialog open={isAddFileModalOpen} onOpenChange={setIsAddFileModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="w-full mt-4">
+                          <Plus className="mr-2 h-4 w-4" /> Add New File
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New File</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">
+                              Name
+                            </Label>
+                            <Input
+                              id="name"
+                              value={newFileName}
+                              onChange={(e) => setNewFileName(e.target.value)}
+                              className="col-span-3"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="language" className="text-right">
+                              Language
+                            </Label>
+                            <Select value={newFileLanguage} onValueChange={setNewFileLanguage}>
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select Language" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {languages.map((lang) => (
+                                  <SelectItem key={lang.value} value={lang.value}>
+                                    {lang.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <Button onClick={addNewFile}>Add File</Button>
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                )}
+              </div>
+            </ResizablePanel>
+            <ResizablePanel defaultSize={60}>
+              <div className="flex flex-col h-full">
+                <div className="flex-grow overflow-hidden">
+                  <MonacoEditor
+                    height="100%"
+                    language={currentFile.language}
+                    value={state}
+                    onChange={handleEditorChange}
+                    theme={editorTheme}
+                    onMount={handleEditorDidMount}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: Number.parseInt(fontSize),
+                      lineNumbers: "on",
+                      roundedSelection: false,
+                      scrollBeyondLastLine: false,
+                      readOnly: false,
+                      automaticLayout: true,
+                    }}
+                  />
+                </div>
+                <div className="h-1/3 bg-black text-green-400 p-4 font-mono overflow-auto">
+                  <h3 className="text-lg font-semibold mb-2">Console Output</h3>
+                  <ScrollArea className="h-[calc(100%-2rem)]">
+                    <pre className="whitespace-pre-wrap">{consoleOutput || "Console output will appear here..."}</pre>
+                  </ScrollArea>
+                </div>
+              </div>
+            </ResizablePanel>
+            <ResizablePanel defaultSize={20}>
+              <Tabs defaultValue="activity" className="h-full flex flex-col">
+                <TabsList className="justify-start">
+                  <TabsTrigger value="activity">Activity Log</TabsTrigger>
                   <TabsTrigger value="ai">AI Suggestion</TabsTrigger>
+                  <TabsTrigger value="comments">Comments</TabsTrigger>
                 </TabsList>
-                <TabsContent value="editor" className="flex-grow overflow-hidden">
-                  <div className="h-full flex flex-col">
-                    <div className="flex-grow overflow-auto">
-                      <MonacoEditor
-                        height="100%"
-                        language={currentFile.language}
-                        value={currentFile.content}
-                        onChange={handleEditorChange}
-                        theme={editorTheme}
-                        onMount={handleEditorDidMount}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 16,
-                          lineNumbers: "on",
-                          roundedSelection: false,
-                          scrollBeyondLastLine: false,
-                          readOnly: false,
-                          automaticLayout: true,
-                        }}
-                      />
-                    </div>
-                    <div className="h-1/3 bg-black text-green-400 p-4 font-mono overflow-auto">
-                      <h3 className="text-lg font-semibold mb-2">Console Output</h3>
-                      <ScrollArea className="h-[calc(100%-2rem)]">
-                        <pre className="whitespace-pre-wrap">
-                          {consoleOutput || "Console output will appear here..."}
-                        </pre>
-                      </ScrollArea>
-                    </div>
-                  </div>
+                <TabsContent value="activity" className="flex-grow overflow-auto">
+                  <ActivityLog activities={activities} />
                 </TabsContent>
                 <TabsContent value="ai" className="flex-grow overflow-auto">
                   <ScrollArea className="h-full">
                     <pre className="p-4 whitespace-pre-wrap">{aiSuggestion || "AI suggestion will appear here..."}</pre>
                   </ScrollArea>
                 </TabsContent>
+                <TabsContent value="comments" className="flex-grow overflow-hidden">
+                  <CommentBox />
+                </TabsContent>
               </Tabs>
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-      <motion.div
-        className="p-4 bg-background"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex space-x-2">
-          <Button onClick={getAiSuggestion} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Getting AI Suggestion...
-              </>
-            ) : (
-              <>
-                <Wand2 className="mr-2 h-4 w-4" /> Get AI Suggestion
-              </>
-            )}
-          </Button>
-          <Button onClick={runCode} disabled={isRunning}>
-            {isRunning ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Running Code...
-              </>
-            ) : (
-              <>
-                <Play className="mr-2 h-4 w-4" /> Run Code
-              </>
-            )}
-          </Button>
-          <Button onClick={runTests}>
-            <Play className="mr-2 h-4 w-4" /> Run Tests
-          </Button>
-          <Button onClick={() => toast({ title: "Saved", description: "Your code has been saved." })}>
-            <Save className="mr-2 h-4 w-4" /> Save
-          </Button>
-          <Button onClick={clearAllHistory} variant="destructive">
-            <Trash2 className="mr-2 h-4 w-4" /> Clear All History
-          </Button>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
-      </motion.div>
-      <Toaster />
-    </div>
+        <motion.div
+          className="p-4 bg-background"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex space-x-2">
+            <Button onClick={getAiSuggestion} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Getting AI Suggestion...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" /> Get AI Suggestion
+                </>
+              )}
+            </Button>
+            <Button onClick={runCode} disabled={isRunning}>
+              {isRunning ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Running Code...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-4 w-4" /> Run Code
+                </>
+              )}
+            </Button>
+            <Button onClick={runTests}>
+              <Play className="mr-2 h-4 w-4" /> Run Tests
+            </Button>
+            <Button onClick={() => toast({ title: "Saved", description: "Your code has been saved." })}>
+              <Save className="mr-2 h-4 w-4" /> Save
+            </Button>
+            <Button onClick={clearAllHistory} variant="destructive">
+              <Trash2 className="mr-2 h-4 w-4" /> Clear All History
+            </Button>
+            <Button onClick={undo} disabled={!canUndo}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Undo
+            </Button>
+            <Button onClick={redo} disabled={!canRedo}>
+              <ArrowRight className="mr-2 h-4 w-4" /> Redo
+            </Button>
+          </div>
+        </motion.div>
+        <Toaster />
+      </div>
+    </ThemeProvider>
   )
 }
 
