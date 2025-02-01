@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+ 
 
-## Getting Started
+---
 
-First, run the development server:
+# 🚀 AI Code Editor – The Future of Web-Based Coding  
+An **AI-powered online code editor** that enables developers to write, execute, and debug code in real-time. Built with **Next.js 15, TypeScript, Tailwind CSS, and Kinde Auth**, this editor offers a seamless and intuitive coding experience.  
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+🔹 **Write. Execute. Debug. All in One Place.**  
+🔹 **Fast, Secure, and AI-Assisted.**  
+🔹 **Supports Multi-language Execution with Real-time Output.**  
+
+---
+
+## 🎯 Key Features  
+
+### ⚡ Real-time Code Execution  
+✅ Supports **JavaScript and Python** (more languages coming soon!)  
+✅ **Instant Output** – See results as you type  
+✅ Secure **sandboxed execution environment**  
+
+### 🤖 AI-Powered Debugging & Assistance  
+✅ Get **intelligent error suggestions** and possible fixes  
+✅ AI-assisted **code optimization**  
+✅ Future integration of **autocomplete & smart refactoring**  
+
+### 🔒 Seamless Authentication with Kinde Auth  
+✅ **Secure login & session management**  
+✅ **OAuth & passwordless authentication support**  
+✅ **Role-based access control for collaborative features**  
+
+### 🎨 Stunning UI & Dark Mode  
+✅ **Minimal & modern design** with **Tailwind CSS**  
+✅ **Light & Dark Mode** for better accessibility  
+✅ Responsive & mobile-friendly layout  
+
+### 🧪 Test Case Automation  
+✅ Define and run **custom test cases** for code validation  
+✅ Instant feedback on **pass/fail cases**  
+
+### 🏎️ Blazing-Fast Performance  
+✅ **Next.js 15** for optimized SSR & SSG  
+✅ **Server-side execution** for quick processing  
+✅ Lightweight and efficient code editor  
+
+---
+
+## 🛠️ Tech Stack  
+
+| **Technology**  | **Usage**  |
+|---------------|-------------|
+| **Next.js 15** | Core framework for server-side rendering |
+| **React 19** | Frontend library for UI development |
+| **TypeScript** | Strongly typed JavaScript for better reliability |
+| **Tailwind CSS** | Styling for a clean, responsive UI |
+| **Kinde Auth** | Authentication for user management |
+| **Code Execution Engine** | Secure sandboxed runtime for executing code |
+| **Framer Motion** | Smooth animations & transitions |
+
+---
+
+## 📥 Installation & Setup  
+
+### 🚀 Clone the Repository  
+```sh
+git clone https://github.com/yourusername/ai-code-editor.git  
+cd ai-code-editor  
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 📦 Install Dependencies  
+```sh
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### ▶️ Run Locally  
+```sh
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Your AI Code Editor will be live at **http://localhost:3000** 🎉  
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛣️ Roadmap & Future Enhancements  
+✅ **Support for more languages** like C++, Java, Go  
+✅ **AI-powered autocomplete** & code suggestions  
+✅ **Collaborative coding** with real-time sharing  
+✅ **Cloud-based file storage** & project management  
+✅ **Integrated terminal & version control support**  
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+🚀 **Your feedback & contributions are welcome!**  
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🤝 Contributing  
+Want to make this project even better? Follow these steps:  
+1. **Fork the repo** and create a new branch  
+2. Make your changes and **commit with a meaningful message**  
+3. **Push the changes** and create a **pull request**  
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+🙌 **We appreciate all contributions!**  
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📜 License  
+This project is licensed under the **MIT License**.  
+
+---
+
+## 🔗 Connect with Me  
+💼 [LinkedIn](https://linkedin.com/in/yourprofile)  
+🐦 [Twitter](https://twitter.com/yourhandle)  
+📧 Email: yourname@email.com  
+
+🌟 **Don't forget to ⭐ the repo if you like this project!**  
+
+---
