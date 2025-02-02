@@ -20,25 +20,36 @@ export function AIAssistant({ currentFile }: AIAssistantProps) {
   const getAiSuggestion = async () => {
     setIsLoading(true)
     try {
-      const res = await axios.post("/api/ai", {
-        prompt: currentFile.content,
-        language: currentFile.language,
-      })
-      setAiSuggestion(res.data.suggestion)
+      const response = await axios({
+        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_KEY}`,
+        method: 'POST',
+        data: {
+          contents: [
+            {
+              parts: [{ text: currentFile.content }],
+            },
+          ],
+        },
+      });
+  
+      const suggestion = response.data.candidates[0].content.parts[0].text;
+      setAiSuggestion(suggestion);
+  
       toast({
         title: "AI Suggestion Ready",
         description: "Check out the AI suggestion below!",
-      })
+      });
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to get AI suggestion. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+  
 
   return (
     <div className="p-4 h-full flex flex-col">
