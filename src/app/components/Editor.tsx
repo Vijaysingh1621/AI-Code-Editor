@@ -20,6 +20,8 @@ import {
   ChevronRight,
   ArrowLeft,
   ArrowRight,
+  Mic,
+  Copy,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -37,6 +39,8 @@ import { ThemeProvider } from "next-themes"
 import { ActivityLog } from "./activity-log"
 import { useUndo } from "@/hooks/use-undo"
 import { CommentBox } from "./comment-box"
+import ReactMarkdown from "react-markdown"
+import { Resizable } from "re-resizable"
 
 // Dynamically import Monaco Editor
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
@@ -101,6 +105,8 @@ export default function CodeEditor() {
   const { theme, setTheme } = useTheme()
   const [activities, setActivities] = useState<Array<{ action: string; timestamp: Date }>>([])
   const { state, setState, undo, redo, canUndo, canRedo } = useUndo(currentFile.content)
+  const [rightPanelWidth, setRightPanelWidth] = useState(300)
+  const [aiInput, setAiInput] = useState("")
 
   useEffect(() => {
     localStorage.setItem("codeEditorFiles", JSON.stringify(files))
@@ -124,19 +130,44 @@ export default function CodeEditor() {
     }
   }, [])
 
-  const getAiSuggestion = async () => {
+  const getAiSuggestion = async (input = "",event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     setIsLoading(true)
     try {
-      const res = await axios.post("/api/ai", { prompt: currentFile.content })
-      setAiSuggestion(res.data.suggestion)
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyDpD_Nbn101S4lRcggObsGv7zmqFjCvAwg`,
+        {
+          contents: [
+            {
+              role: "user", // Ensure role is set
+              parts: [{ text: input || currentFile.content }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7, // Adjust creativity
+            maxOutputTokens: 500, // Limit response length
+          },
+        },
+      )
+
+      const suggestion = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "No suggestion available."
+
+      setAiSuggestion(suggestion)
+
       toast({
         title: "AI Suggestion Ready",
         description: "Check out the AI suggestion!",
       })
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Error fetching AI suggestion:", error.response?.data || error.message)
+      } else {
+        console.error("Error fetching AI suggestion:", error)
+      }
       toast({
         title: "Error",
-        description: "Failed to get AI suggestion. Please try again.",
+        description: axios.isAxiosError(error)
+          ? error.response?.data?.error?.message || "Failed to get AI suggestion."
+          : "Failed to get AI suggestion.",
         variant: "destructive",
       })
     } finally {
@@ -223,6 +254,15 @@ export default function CodeEditor() {
       default:
         return <FileIcon className="mr-2 h-4 w-4" />
     }
+  }
+
+  const clearAndSaveAiSuggestion = () => {
+    localStorage.setItem("lastAiSuggestion", aiSuggestion)
+    setAiSuggestion("")
+    toast({
+      title: "AI Suggestion Saved",
+      description: "The last AI suggestion has been saved and cleared.",
+    })
   }
 
   return (
@@ -412,7 +452,14 @@ export default function CodeEditor() {
                 </div>
               </div>
             </ResizablePanel>
-            <ResizablePanel defaultSize={20}>
+            <Resizable
+              size={{ width: rightPanelWidth, height: "100%" }}
+              onResizeStop={(e, direction, ref, d) => {
+                setRightPanelWidth(rightPanelWidth + d.width)
+              }}
+              minWidth={200}
+              maxWidth={600}
+            >
               <Tabs defaultValue="activity" className="h-full flex flex-col">
                 <TabsList className="justify-start">
                   <TabsTrigger value="activity">Activity Log</TabsTrigger>
@@ -424,14 +471,48 @@ export default function CodeEditor() {
                 </TabsContent>
                 <TabsContent value="ai" className="flex-grow overflow-auto">
                   <ScrollArea className="h-full">
-                    <pre className="p-4 whitespace-pre-wrap">{aiSuggestion || "AI suggestion will appear here..."}</pre>
+                    <ReactMarkdown className="p-4">{aiSuggestion || "AI suggestion will appear here..."}</ReactMarkdown>
+                    <div className="flex justify-between mt-2">
+                      <Button onClick={() => navigator.clipboard.writeText(aiSuggestion)}>
+                        <Copy className="mr-2 h-4 w-4" /> Copy
+                      </Button>
+                      <Button onClick={() => handleEditorChange(aiSuggestion)}>
+                        <ArrowRight className="mr-2 h-4 w-4" /> Transfer to Editor
+                      </Button>
+                    </div>
+                    <div className="p-4 border-t">
+                      <div className="flex items-center mb-2">
+                        <Input
+                          placeholder="Ask for help..."
+                          value={aiInput}
+                          onChange={(e) => setAiInput(e.target.value)}
+                          className="flex-grow mr-2"
+                        />
+                        <Button size="icon">
+                          <Mic />
+                        </Button>
+                      </div>
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Sample prompts: "Optimize this code", "Explain this function", "Add comments"
+                      </div>
+                      <Button onClick={(event) => getAiSuggestion(aiInput, event)} disabled={isLoading} className="w-full">
+                        {isLoading ? (
+                          <div className="w-6 h-6 border-2 border-t-transparent border-blue-500 rounded-full animate-spin" />
+                        ) : (
+                          <>Get AI Suggestion</>
+                        )}
+                      </Button>
+                      <Button onClick={clearAndSaveAiSuggestion} className="mt-2 w-full">
+                        Clear & Save AI Suggestion
+                      </Button>
+                    </div>
                   </ScrollArea>
                 </TabsContent>
                 <TabsContent value="comments" className="flex-grow overflow-hidden">
                   <CommentBox />
                 </TabsContent>
               </Tabs>
-            </ResizablePanel>
+            </Resizable>
           </ResizablePanelGroup>
         </div>
         <motion.div
@@ -441,7 +522,7 @@ export default function CodeEditor() {
           transition={{ duration: 0.5 }}
         >
           <div className="flex space-x-2">
-            <Button onClick={getAiSuggestion} disabled={isLoading}>
+            <Button onClick={(event) => getAiSuggestion("", event)} disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Getting AI Suggestion...
