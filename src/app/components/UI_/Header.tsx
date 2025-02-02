@@ -7,6 +7,11 @@ import { Code2, Menu, X, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import type React from "react" // Added import for React
 
+
+
+
+
+
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
