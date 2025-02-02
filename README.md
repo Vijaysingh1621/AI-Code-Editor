@@ -1,116 +1,137 @@
- 
+
+
+# **Codecraft AI** 🚀  
+### **AI-Powered Code Editor with Intelligent Assistance**  
+
+![Codecraft AI Banner](https://aicodecrafteditor.vercel.app/) *(Add a banner image if available)*  
+
+## **🔹 Overview**  
+Codecraft AI is a lightweight, AI-assisted code editor designed to boost developer productivity with intelligent code suggestions, auto-completion, and quick fixes. Built with Next.js 15, Tailwind CSS, TypeScript, and ShadCN UI, it offers a seamless, intuitive coding experience.  
+
+🔹 **Key Features:**  
+- ✨ **AI Assistance** powered by **Gemini AI** (auto-completion, linting, documentation generation).  
+- 🔥 **Modern UI** with **ShadCN UI** for a sleek and responsive design.  
+- 🛡 **Authentication** with **Clerk** (Google OAuth, email login, 2FA).  
+- 🎨 **Customizable Editor** with syntax highlighting, themes, and word wrap.  
+- 🌐 **Future Scope:** Real-time collaboration with multi-user editing and live cursors.  
 
 ---
 
-# 🚀 AI Code Editor – The Future of Web-Based Coding  
-An **AI-powered online code editor** that enables developers to write, execute, and debug code in real-time. Built with **Next.js 15, TypeScript, Tailwind CSS, and Kinde Auth**, this editor offers a seamless and intuitive coding experience.  
-
-🔹 **Write. Execute. Debug. All in One Place.**  
-🔹 **Fast, Secure, and AI-Assisted.**  
-🔹 **Supports Multi-language Execution with Real-time Output.**  
-
----
-
-## 🎯 Key Features  
-
-### ⚡ Real-time Code Execution  
-✅ Supports **JavaScript and Python** (more languages coming soon!)  
-✅ **Instant Output** – See results as you type  
-✅ Secure **sandboxed execution environment**  
-
-### 🤖 AI-Powered Debugging & Assistance  
-✅ Get **intelligent error suggestions** and possible fixes  
-✅ AI-assisted **code optimization**  
-✅ Future integration of **autocomplete & smart refactoring**  
-
-### 🔒 Seamless Authentication with Kinde Auth  
-✅ **Secure login & session management**  
-✅ **OAuth & passwordless authentication support**  
-✅ **Role-based access control for collaborative features**  
-
-### 🎨 Stunning UI & Dark Mode  
-✅ **Minimal & modern design** with **Tailwind CSS**  
-✅ **Light & Dark Mode** for better accessibility  
-✅ Responsive & mobile-friendly layout  
-
-### 🧪 Test Case Automation  
-✅ Define and run **custom test cases** for code validation  
-✅ Instant feedback on **pass/fail cases**  
-
-### 🏎️ Blazing-Fast Performance  
-✅ **Next.js 15** for optimized SSR & SSG  
-✅ **Server-side execution** for quick processing  
-✅ Lightweight and efficient code editor  
+## **🛠 Tech Stack**  
+| Technology | Description |
+|------------|------------|
+| **Next.js 15** | Modern React framework for performance & scalability |
+| **Tailwind CSS** | Utility-first CSS framework for styling |
+| **TypeScript** | Strongly typed JavaScript for better maintainability |
+| **ShadCN UI** | Beautiful and customizable UI components |
+| **Gemini AI** | AI-powered code assistance |
+| **Clerk** | Secure authentication with OAuth & 2FA |
 
 ---
 
-## 🛠️ Tech Stack  
-
-| **Technology**  | **Usage**  |
-|---------------|-------------|
-| **Next.js 15** | Core framework for server-side rendering |
-| **React 19** | Frontend library for UI development |
-| **TypeScript** | Strongly typed JavaScript for better reliability |
-| **Tailwind CSS** | Styling for a clean, responsive UI |
-| **Kinde Auth** | Authentication for user management |
-| **Code Execution Engine** | Secure sandboxed runtime for executing code |
-| **Framer Motion** | Smooth animations & transitions |
+## **📸 Screenshots** *(Add actual screenshots here)*  
+| Code Editor | AI Assistance | Custom Themes |
+|------------|--------------|--------------|
+| ![Editor](https://your-image-link.com) | ![AI Suggestions](https://your-image-link.com) | ![Themes](https://your-image-link.com) |
 
 ---
 
-## 📥 Installation & Setup  
+## **⚡ Features**  
 
-### 🚀 Clone the Repository  
+### 🔹 **1. Code Editor**  
+✔ Syntax highlighting (multiple themes)  
+✔ Bracket matching & auto-indentation  
+✔ Line numbering & word wrap  
+✔ Collapsible file explorer  
+
+### 🤖 **2. AI-Powered Code Assistance**  
+✔ AI-driven auto-completion for function names & variables  
+✔ Quick fix suggestions for syntax errors  
+✔ AI-powered code documentation generation  
+✔ Code snippet suggestions  
+
+### 🔄 **3. Future Scope: Real-Time Collaboration**  
+✔ Multi-user live editing (via WebSockets)  
+✔ Live cursor tracking & in-editor comments  
+✔ Activity log & basic version control  
+
+### 🔐 **4. Security & Authentication**  
+✔ Clerk-based authentication (Google OAuth, email login, 2FA)  
+✔ Private & public workspaces  
+✔ Secure session management  
+
+### 🎨 **5. User Experience & UI Enhancements**  
+✔ Dark & light mode toggle  
+✔ Customizable font size & color themes  
+✔ Collapsible sidebar for maximum workspace  
+
+---
+
+## **📦 Installation & Setup**  
+
+### **1️⃣ Clone the Repository**  
 ```sh
-git clone https://github.com/yourusername/ai-code-editor.git  
-cd ai-code-editor  
+git clone https://github.com/Vijaysingh1621/codecraft-ai.git
+cd codecraft-ai
 ```
 
-### 📦 Install Dependencies  
+### **2️⃣ Install Dependencies**  
 ```sh
 npm install
 ```
 
-### ▶️ Run Locally  
+### **3️⃣ Configure Environment Variables**  
+Create a `.env.local` file in the root directory and add the required API keys:  
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+```
+
+### **4️⃣ Run the Development Server**  
 ```sh
 npm run dev
 ```
-
-Your AI Code Editor will be live at **http://localhost:3000** 🎉  
-
----
-
-## 🛣️ Roadmap & Future Enhancements  
-✅ **Support for more languages** like C++, Java, Go  
-✅ **AI-powered autocomplete** & code suggestions  
-✅ **Collaborative coding** with real-time sharing  
-✅ **Cloud-based file storage** & project management  
-✅ **Integrated terminal & version control support**  
-
-🚀 **Your feedback & contributions are welcome!**  
+🚀 Open **[http://localhost:3000](http://localhost:3000)** to view it in your browser.  
 
 ---
 
-## 🤝 Contributing  
-Want to make this project even better? Follow these steps:  
-1. **Fork the repo** and create a new branch  
-2. Make your changes and **commit with a meaningful message**  
-3. **Push the changes** and create a **pull request**  
+## **💡 Usage Guide**  
 
-🙌 **We appreciate all contributions!**  
-
----
-
-## 📜 License  
-This project is licensed under the **MIT License**.  
+1️⃣ **Sign In**: Authenticate using Google OAuth or email.  
+2️⃣ **Start Coding**: Use the intelligent code editor with AI-powered assistance.  
+3️⃣ **Get AI Suggestions**: Click on AI recommendations for auto-completions & fixes.  
+4️⃣ **Customize UI**: Switch themes, adjust font size, and toggle dark/light mode.  
+5️⃣ **Future (Real-Time Collaboration)**: Invite other users for multi-user editing.  
 
 ---
 
-## 🔗 Connect with Me  
-💼 [LinkedIn](https://linkedin.com/in/yourprofile)  
-🐦 [Twitter](https://twitter.com/yourhandle)  
-📧 Email: yourname@email.com  
+## **🛠 Contributing**  
+Contributions are welcome! Follow these steps:  
 
-🌟 **Don't forget to ⭐ the repo if you like this project!**  
+1. **Fork the repository**  
+2. **Create a feature branch** (`git checkout -b feature-name`)  
+3. **Commit changes** (`git commit -m "Added new feature"`)  
+4. **Push to the branch** (`git push origin feature-name`)  
+5. **Create a Pull Request**  
 
 ---
+
+## **🎯 Roadmap**  
+
+✅ **MVP Features:** AI-powered suggestions, syntax highlighting, authentication.  
+🔜 **Next Steps:** WebSockets for real-time multi-user editing.  
+📌 **Future Enhancements:** AI-based code refactoring, mobile-friendly UI, and more!  
+
+---
+
+## **📄 License**  
+This project is licensed under the **MIT License** – feel free to use and contribute!  
+
+---
+
+## **📩 Contact & Support**  
+📧 Email: your-email@example.com  
+🔗 LinkedIn: [Your LinkedIn](https://linkedin.com/in/your-profile)  
+🌍 GitHub: [Your GitHub](https://github.com/your-username)  
+
