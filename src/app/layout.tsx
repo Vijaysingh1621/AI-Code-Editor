@@ -4,8 +4,9 @@ import "./globals.css";
 import { ThemeProvider } from "./components/theme-provider";
 
 import {
-  ClerkProvider,
+  ClerkProvider,ClerkLoading
 } from '@clerk/nextjs'
+import { AnimatedLoader } from "./components/animated-loader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         {children}
+        <ClerkLoading>
+            {/* Render a loading spinner or message */}
+            <div><AnimatedLoader/></div>
+          </ClerkLoading>
         </ThemeProvider>
       </body>
     </html>

@@ -29,7 +29,7 @@ const Hero = () => {
           transition={{ delay: 0.2, duration: 0.5 }}
         >
           <SignedOut>
-          <SignInButton>
+          <SignInButton mode="modal">
           <Link
             href="/"
             className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full inline-flex items-center transition-colors duration-200"
