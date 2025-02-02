@@ -4,6 +4,13 @@ import { motion } from "framer-motion"
 import { ArrowRight, Code2 } from "lucide-react"
 import Link from "next/link"
 
+import {
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton
+} from '@clerk/nextjs'
+
 const Hero = () => {
   return (
     <section className="pt-32 pb-20 px-4 relative overflow-hidden">
@@ -21,12 +28,26 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
+          <SignedOut>
+          <SignInButton>
           <Link
-            href="/CodeEditor"
+            href="/"
             className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full inline-flex items-center transition-colors duration-200"
           >
             Get Started <ArrowRight className="ml-2" />
           </Link>
+          </SignInButton>
+          
+          </SignedOut>
+          <SignedIn>
+           
+          <Link
+            href="/CodeEditor"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full inline-flex items-center transition-colors duration-200"
+          >
+            Start coding <ArrowRight className="ml-2" />
+          </Link>
+          </SignedIn>
         </motion.div>
         <motion.div
           className="mt-16"

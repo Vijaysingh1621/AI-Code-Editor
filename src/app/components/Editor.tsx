@@ -41,6 +41,8 @@ import { useUndo } from "@/hooks/use-undo"
 import { CommentBox } from "./comment-box"
 import ReactMarkdown from "react-markdown"
 import { Resizable } from "re-resizable"
+import { useClerk, UserButton } from "@clerk/nextjs"
+import CodingLoader from "./coding-loader"
 
 // Dynamically import Monaco Editor
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
@@ -49,6 +51,10 @@ const themes = [
   { value: "vs-dark", label: "Dark" },
   { value: "light", label: "Light" },
   { value: "hc-black", label: "High Contrast" },
+  { value: "monokai", label: "Monokai" },
+  { value: "github", label: "GitHub" },
+  { value: "solarized-dark", label: "Solarized Dark" },
+  { value: "solarized-light", label: "Solarized Light" },
 ]
 
 const languages = [
@@ -105,8 +111,10 @@ export default function CodeEditor() {
   const { theme, setTheme } = useTheme()
   const [activities, setActivities] = useState<Array<{ action: string; timestamp: Date }>>([])
   const { state, setState, undo, redo, canUndo, canRedo } = useUndo(currentFile.content)
-  const [rightPanelWidth, setRightPanelWidth] = useState(300)
+  const [rightPanelWidth, setRightPanelWidth] = useState(400) // Increased from 300 to 400
   const [aiInput, setAiInput] = useState("")
+  const [activeTab, setActiveTab] = useState("activity")
+  const { user } = useClerk()
 
   useEffect(() => {
     localStorage.setItem("codeEditorFiles", JSON.stringify(files))
@@ -130,21 +138,22 @@ export default function CodeEditor() {
     }
   }, [])
 
-  const getAiSuggestion = async (input = "",event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  const getAiSuggestion = async (input = "", event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     setIsLoading(true)
+    setActiveTab("ai")
     try {
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyDpD_Nbn101S4lRcggObsGv7zmqFjCvAwg`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_KEY}`,
         {
           contents: [
             {
-              role: "user", // Ensure role is set
+              role: "user",
               parts: [{ text: input || currentFile.content }],
             },
           ],
           generationConfig: {
-            temperature: 0.7, // Adjust creativity
-            maxOutputTokens: 500, // Limit response length
+            temperature: 0.7,
+            maxOutputTokens: 500,
           },
         },
       )
@@ -281,7 +290,7 @@ export default function CodeEditor() {
       >
         <div className="flex justify-between items-center p-4 bg-background">
           <h1 className="text-2xl font-bold flex items-center">
-            <Code2 className="mr-2" /> Advanced Code Editor
+            <Code2 className="mr-2" />CodeCraft
           </h1>
           <div className="flex space-x-4">
             <Select
@@ -323,19 +332,13 @@ export default function CodeEditor() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex space-x-2 items-center">
-              <Label htmlFor="accent-color">Accent:</Label>
-              <Input
-                id="accent-color"
-                type="color"
-                value={accentColor}
-                onChange={(e) => setAccentColor(e.target.value)}
-                className="w-8 h-8 p-0 border-none"
-              />
-            </div>
+            
             <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
               {theme === "dark" ? "🌞" : "🌙"}
             </Button>
+            <div className="flex space-x-2 items-center">
+              <UserButton/>
+            </div>
           </div>
         </div>
         <div className="flex-grow flex overflow-hidden">
@@ -460,26 +463,43 @@ export default function CodeEditor() {
               minWidth={200}
               maxWidth={600}
             >
-              <Tabs defaultValue="activity" className="h-full flex flex-col">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
                 <TabsList className="justify-start">
                   <TabsTrigger value="activity">Activity Log</TabsTrigger>
                   <TabsTrigger value="ai">AI Suggestion</TabsTrigger>
                   <TabsTrigger value="comments">Comments</TabsTrigger>
                 </TabsList>
                 <TabsContent value="activity" className="flex-grow overflow-auto">
-                  <ActivityLog activities={activities} />
+                  <ActivityLog activities={activities} onActivityClick={(activity) => console.log(activity)} />
                 </TabsContent>
-                <TabsContent value="ai" className="flex-grow overflow-auto">
+                <TabsContent value="ai" className="flex-grow overflow-auto p-4">
                   <ScrollArea className="h-full">
-                    <ReactMarkdown className="p-4">{aiSuggestion || "AI suggestion will appear here..."}</ReactMarkdown>
-                    <div className="flex justify-between mt-2">
-                      <Button onClick={() => navigator.clipboard.writeText(aiSuggestion)}>
-                        <Copy className="mr-2 h-4 w-4" /> Copy
-                      </Button>
-                      <Button onClick={() => handleEditorChange(aiSuggestion)}>
-                        <ArrowRight className="mr-2 h-4 w-4" /> Transfer to Editor
-                      </Button>
-                    </div>
+                    {isLoading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <CodingLoader />
+                      </div>
+                    ) : (
+                      <div className="bg-background p-6 rounded-lg shadow-lg">
+                        <ReactMarkdown className="prose dark:prose-invert max-w-none mb-4">
+                          {aiSuggestion || "AI suggestion will appear here..."}
+                        </ReactMarkdown>
+                        <div className="flex justify-between mt-4">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => navigator.clipboard.writeText(aiSuggestion)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button onClick={() => handleEditorChange(aiSuggestion)}>
+                            <ArrowRight className="mr-2 h-4 w-4" /> Apply to Editor
+                          </Button>
+                          <Button onClick={clearAndSaveAiSuggestion}>
+                            <Save className="mr-2 h-4 w-4" /> Save 
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     <div className="p-4 border-t">
                       <div className="flex items-center mb-2">
                         <Input
@@ -495,15 +515,18 @@ export default function CodeEditor() {
                       <div className="text-sm text-muted-foreground mb-2">
                         Sample prompts: "Optimize this code", "Explain this function", "Add comments"
                       </div>
-                      <Button onClick={(event) => getAiSuggestion(aiInput, event)} disabled={isLoading} className="w-full">
+                      <Button
+                        onClick={(event) => getAiSuggestion(aiInput, event)}
+                        disabled={isLoading}
+                        className="w-full h-10 relative overflow-hidden"
+                      >
                         {isLoading ? (
-                          <div className="w-6 h-6 border-2 border-t-transparent border-blue-500 rounded-full animate-spin" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-primary">
+                            <CodingLoader />
+                          </div>
                         ) : (
-                          <>Get AI Suggestion</>
+                          <>Generate</>
                         )}
-                      </Button>
-                      <Button onClick={clearAndSaveAiSuggestion} className="mt-2 w-full">
-                        Clear & Save AI Suggestion
                       </Button>
                     </div>
                   </ScrollArea>
@@ -522,11 +545,15 @@ export default function CodeEditor() {
           transition={{ duration: 0.5 }}
         >
           <div className="flex space-x-2">
-            <Button onClick={(event) => getAiSuggestion("", event)} disabled={isLoading}>
+            <Button
+              onClick={(event) => getAiSuggestion("", event)}
+              disabled={isLoading}
+              className="relative overflow-hidden h-10"
+            >
               {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Getting AI Suggestion...
-                </>
+                <div className="absolute inset-0 flex items-center justify-center bg-primary">
+                  <CodingLoader />
+                </div>
               ) : (
                 <>
                   <Wand2 className="mr-2 h-4 w-4" /> Get AI Suggestion

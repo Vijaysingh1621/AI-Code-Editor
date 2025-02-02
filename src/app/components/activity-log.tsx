@@ -1,20 +1,41 @@
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { formatDistanceToNow } from "date-fns"
 
-interface ActivityLogProps {
-  activities: Array<{ action: string; timestamp: Date }>
+interface Activity {
+  action: string
+  timestamp: Date
+  file?: string
+  changes?: string
 }
 
-export function ActivityLog({ activities }: ActivityLogProps) {
+interface ActivityLogProps {
+  activities: Activity[]
+  onActivityClick: (activity: Activity) => void
+}
+
+export function ActivityLog({ activities, onActivityClick }: ActivityLogProps) {
   return (
-    <ScrollArea className="h-[200px] w-full border rounded-md p-4">
-      <h3 className="font-semibold mb-2">Activity Log</h3>
-      {activities.map((activity, index) => (
-        <div key={index} className="mb-2">
-          <span className="text-sm text-muted-foreground">{activity.timestamp.toLocaleTimeString()}:</span>
-          <span className="ml-2">{activity.action}</span>
-        </div>
-      ))}
+    <ScrollArea className="h-full">
+      <div className="space-y-4 p-4">
+        {activities.map((activity, index) => (
+          <div
+            key={index}
+            className="bg-background p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => onActivityClick(activity)}
+          >
+            <div className="font-medium">{activity.action}</div>
+            {activity.file && <div className="text-sm text-muted-foreground">File: {activity.file}</div>}
+            {activity.changes && (
+              <div className="text-sm text-muted-foreground mt-1">
+                Changes: {activity.changes.length > 50 ? `${activity.changes.substring(0, 50)}...` : activity.changes}
+              </div>
+            )}
+            <div className="text-xs text-muted-foreground mt-1">
+              {formatDistanceToNow(activity.timestamp, { addSuffix: true })}
+            </div>
+          </div>
+        ))}
+      </div>
     </ScrollArea>
   )
 }
-
